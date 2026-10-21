@@ -1,0 +1,44 @@
+# hpcjob の設定。プロジェクトのフォルダに hpcjob.toml として写し、PROJECT をプロジェクト名にする。
+# 書ける項目の全部: https://github.com/tomaunno/hpc-job-toolkit
+
+[remote]
+host = "{{ALIAS}}"                  # ~/.ssh/config の接続名
+workdir = "{{WORKDIR}}/PROJECT"     # TSUBAME 側の置き場所。src/ の中身がここへ送られる
+scheduler = "uge"
+account = "{{GROUP}}"               # qsub -g。ポイントはこのグループから引かれる
+ssh = "{{SSH}}"
+scp = "{{SCP}}"
+logdir = "auto/logs"                # workdir からの相対
+jobsdir = "auto/jobs"
+
+[local]
+src = "src"                         # 同期するコードとデータ(下の階層は送らない)
+jobs = "jobs"                       # ジョブのスクリプト *.sh
+results = "results"                 # hpcjob pull の受け取り先
+
+[defaults]
+resource = "cpu_4=1"                # 投げるたびに -r で選ぶ
+walltime = "1:00:00"
+max_walltime = "24:00:00"           # TSUBAME の上限
+trial_max_walltime = "0:03:00"      # お試し実行(-g なし)の上限
+poll_seconds = 60                   # watch の確認間隔。qstat の連打は禁止
+connect_timeout = 20
+
+# hpcjob usage のポイント計算(TSUBAME の課金式)
+[cost]
+elapsed_weight = 0.7
+requested_weight = 0.1
+
+[cost.coefficient]
+node_f = 1.0
+node_h = 0.5
+node_q = 0.25
+gpu_1 = 0.2
+node_o = 0.125
+gpu_h = 0.1
+cpu_160 = 0.6
+cpu_80 = 0.3
+cpu_40 = 0.15
+cpu_16 = 0.06
+cpu_8 = 0.03
+cpu_4 = 0.015
