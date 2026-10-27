@@ -11,6 +11,7 @@ opens, and never passes through this process.
     uv run --managed-python --python 3.12 setup/t4setup.py <subcommand>
 
     check
+    reuse --user ux12345        (keys already in ~/.ssh; or --key PATH)
     key --passphrase yes|no     then:  key --wait
     portal [--no-browser]
     connect --user ux12345      (or --existing ALIAS)
@@ -588,6 +589,51 @@ def probe(alias: str) -> dict:
     return info
 
 
+def cmd_reuse(st: State, ns) -> None:
+    """Before making a new key, try the keys already in ~/.ssh with this login name.
+
+    Someone who already uses TSUBAME from this PC without a Host block (plain
+    `ssh ux12345@login...`) has a key registered in the portal; using it saves a
+    second key and the portal step. A key with a passphrase that the agent does
+    not hold cannot be tried; those are listed, and `--key PATH` takes the one
+    the person says is theirs.
+    """
+    user = ns.user.strip().lower()
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{2,31}", user):
+        return result("error", reason="bad_login_name", user=user)
+    if ns.key:
+        key = Path(undo_msys(ns.key)).expanduser()
+        if not (key.exists() and Path(str(key) + ".pub").exists()):
+            return result("error", reason="key_not_found", key=str(key))
+        st.set(key_path=str(key))
+        if not key_unlocked(key) and not agent_has(key):
+            return result("need_passphrase", key=str(key),
+                          hint="run `key --passphrase yes` (it only asks for the passphrase), then `connect`")
+    else:
+        tried, locked, found = [], [], None
+        for pub in sorted(SSH_DIR.glob("*.pub")) if SSH_DIR.exists() else []:
+            key = pub.with_suffix("")
+            if not key.exists():
+                continue
+            if not key_unlocked(key) and not agent_has(key):
+                locked.append(str(key))
+                continue
+            r = run([openssh("ssh"), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes", "-o", "ConnectTimeout=20",
+                     "-o", "StrictHostKeyChecking=accept-new", "-i", str(key), f"{user}@{LOGIN_HOST}", "echo T4OK"],
+                    timeout=90)
+            tried.append(str(key))
+            if "T4OK" in r.stdout:
+                found = key
+                break
+            if diagnose(r.stderr) == "network":
+                return result("error", reason="network", detail=r.stderr.strip()[-400:])
+        if not found:
+            return result("none", tried=tried, locked_keys=locked)
+        print(f"this key already logs in: {found}")
+        st.set(key_path=str(found))
+    cmd_connect(st, argparse.Namespace(existing=None, user=user))
+
+
 def cmd_connect(st: State, ns) -> None:
     if ns.existing:
         alias = ns.existing
@@ -828,6 +874,9 @@ def main() -> int:
     k.add_argument("--minutes", type=float, default=8)
     po = sub.add_parser("portal", help="copy the public key and open the TSUBAME portal")
     po.add_argument("--no-browser", action="store_true", help="do not open the default browser")
+    ru = sub.add_parser("reuse", help="before making a key: try the keys already in ~/.ssh with this login name")
+    ru.add_argument("--user", required=True, help="TSUBAME login name, e.g. ux12345")
+    ru.add_argument("--key", help="a key with a passphrase that the person says is registered in the portal")
     c = sub.add_parser("connect", help="add the ssh alias, test the login, list groups and folders")
     c.add_argument("--user", help="TSUBAME login name, e.g. ux12345")
     c.add_argument("--existing", metavar="ALIAS", help="use an ssh alias that is already configured")
@@ -847,7 +896,7 @@ def main() -> int:
     global AGENT_LABEL
     AGENT_LABEL = "Codex" if st.get("agent") == "codex" else "Claude"
     try:
-        {"check": cmd_check, "key": cmd_key, "portal": cmd_portal, "connect": cmd_connect,
+        {"check": cmd_check, "reuse": cmd_reuse, "key": cmd_key, "portal": cmd_portal, "connect": cmd_connect,
          "install": cmd_install, "smoke": cmd_smoke, "cleanup": cmd_cleanup}[ns.command](st, ns)
     except subprocess.TimeoutExpired as exc:     # the caller always gets a RESULT line to read
         result("error", reason="timeout", detail=f"{' '.join(map(str, exc.cmd))[:300]} took over {exc.timeout} s")

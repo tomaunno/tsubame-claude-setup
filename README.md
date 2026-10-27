@@ -28,7 +28,7 @@
 
 3. あとは Claude の質問に答えるだけです。
    - 「実行してよいか」と聞かれたら「はい(Yes)」を押します。
-   - 途中で 1 回、TSUBAME のサイト(ポータル)に大学の ID でログインしてもらいます。
+   - 途中で 1 回、TSUBAME のサイト(ポータル)に大学の ID でログインしてもらいます。前から TSUBAME を使っていて、このパソコンにポータルに登録した鍵があれば、その鍵をそのまま使うので、この手順も新しい鍵も要りません。
    - 鍵にパスフレーズ(パスワード)を付けると決めた場合は、新しく開いた窓で、あなたが自分で打ちます。Claude には見えません。
 
 かかる時間は 10〜20 分です。最後に小さな計算を 1 回だけ試しに送ります(0.01 ポイント未満)。
@@ -48,7 +48,7 @@ Claude に頼むだけです。
 
 | 入るもの | 場所 | 役割 |
 |---|---|---|
-| TSUBAME に入るための鍵と、接続の設定 | `~/.ssh/id_ed25519_tsubame`、`~/.ssh/config` の `Host tsubame` | あなたのアカウントで TSUBAME に入る |
+| TSUBAME に入るための鍵と、接続の設定 | `~/.ssh/id_ed25519_tsubame`(前からある鍵で入れるときは作らず、その鍵を使う)、`~/.ssh/config` の `Host tsubame` | あなたのアカウントで TSUBAME に入る |
 | uv と hpcjob | `~/.local/bin/` | hpcjob が TSUBAME への送受信とジョブの操作をする([hpc-job-toolkit](https://github.com/tomaunno/hpc-job-toolkit))。uv はそれを Python ごと入れる |
 | Claude のスキル | `~/.claude/skills/tsubame/`(Codex なら `~/.agents/skills/tsubame/`) | TSUBAME の使い方と、あなたの接続の値を Claude(か Codex)に教える |
 | 確認なしで動かす許可(Claude Code で、選んだ場合だけ) | `~/.claude/settings.json` | hpcjob の送る・見る・取ってくる操作を、毎回聞かずに動かす |
