@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""TSUBAME 4.0 setup steps, driven by Claude Code following SETUP.md.
+"""TSUBAME 4.0 setup steps, driven by Claude Code (or Codex) following SETUP.md.
 
 Every subcommand does one step, prints what it did, and ends with exactly one
 line `RESULT {json}` for the caller to parse. Nothing here reads from stdin:
@@ -45,6 +45,7 @@ CHECK_DIR = "tsubame-setup-check"     # under the workdir on TSUBAME; removed by
 # hpcjob subcommands that may run without a prompt when the person agrees (`install --allow`).
 # `run` (any command on the login node) and `cancel` keep asking.
 ALLOWED_SUBCOMMANDS = ("sync", "submit", "status", "log", "watch", "pull", "push", "usage")
+AGENT_LABEL = "Claude"                # "Codex" with --agent codex; named in the passphrase window
 
 REPO = Path(__file__).resolve().parent.parent
 HOME = Path.home()
@@ -100,6 +101,14 @@ class State:
 
 def claude_dir(st: State) -> Path:
     return Path(st.get("claude_dir") or os.environ.get("CLAUDE_CONFIG_DIR") or HOME / ".claude")
+
+
+def skills_root(st: State) -> Path:
+    """Where the agent driving this setup loads skills from: Claude Code reads
+    ~/.claude/skills, Codex (ChatGPT) reads ~/.agents/skills (same SKILL.md format)."""
+    if st.get("skills_dir"):            # testing
+        return Path(st["skills_dir"])
+    return HOME / ".agents" / "skills" if st.get("agent") == "codex" else claude_dir(st) / "skills"
 
 
 def key_path(st: State) -> Path:
@@ -339,8 +348,9 @@ def cmd_check(st: State, ns) -> None:
         "alias_for_new_setup": st.get("alias") or free_alias(),
         "keys": keys,
         "uv": find_uv(), "hpcjob": hpcjob_path(),
-        "claude_dir": str(claude_dir(st)),
-        "skill_installed": (claude_dir(st) / "skills" / "tsubame" / "SKILL.md").exists(),
+        "agent": st.get("agent", "claude"),
+        "skills_root": str(skills_root(st)),
+        "skill_installed": (skills_root(st) / "tsubame" / "SKILL.md").exists(),
     }
     if IS_WIN:
         info["windows_ssh_agent"] = windows_agent()
@@ -364,7 +374,7 @@ def write_windows_window(script: Path, key: Path, create: bool, marker: Path, co
             "Write-Host '(英語で Enter passphrase と出ます。それが入力する場所です)'",
             "Write-Host ''",
             f"& '{keygen}' -t ed25519 -f '{key}' -C '{comment}'",
-            "if ($LASTEXITCODE -ne 0) { Write-Host '鍵を作れませんでした。この窓を閉じて Claude に伝えてください。' -ForegroundColor Red;"
+            f"if ($LASTEXITCODE -ne 0) {{ Write-Host '鍵を作れませんでした。この窓を閉じて {AGENT_LABEL} に伝えてください。' -ForegroundColor Red;"
             f" Set-Content -Path '{marker}' -Value 'failed'; Read-Host 'Enter で閉じます'; exit 1 }}",
             "Write-Host ''",
         ]
@@ -372,11 +382,11 @@ def write_windows_window(script: Path, key: Path, create: bool, marker: Path, co
         "Write-Host 'パソコンにパスフレーズを覚えさせます。いま決めたパスフレーズをもう一度打って Enter を押してください。' -ForegroundColor Cyan",
         "Write-Host '(英語で Enter passphrase と出ます)'",
         f"& '{add}' '{key}'",
-        "if ($LASTEXITCODE -ne 0) { Write-Host 'うまくいきませんでした。この窓を閉じて Claude に伝えてください。' -ForegroundColor Red;"
+        f"if ($LASTEXITCODE -ne 0) {{ Write-Host 'うまくいきませんでした。この窓を閉じて {AGENT_LABEL} に伝えてください。' -ForegroundColor Red;"
         f" Set-Content -Path '{marker}' -Value 'failed'; Read-Host 'Enter で閉じます'; exit 1 }}",
         f"Set-Content -Path '{marker}' -Value 'done'",
         "Write-Host ''",
-        "Write-Host '終わりました。この窓を閉じて、Claude の画面に戻ってください。' -ForegroundColor Green",
+        f"Write-Host '終わりました。この窓を閉じて、{AGENT_LABEL} の画面に戻ってください。' -ForegroundColor Green",
         "Read-Host 'Enter で閉じます'",
     ]
     # Windows PowerShell 5.1 reads a script as UTF-8 only when it has a BOM.
@@ -392,13 +402,13 @@ def write_mac_window(script: Path, key: Path, create: bool, marker: Path, commen
             "echo '打っても画面には何も出ませんが、ちゃんと入っています。同じものをもう一度聞かれたら、もう一度打って return。'",
             "echo '(英語で Enter passphrase と出ます。それが入力する場所です)'", "echo",
             f"if ! ssh-keygen -t ed25519 -f '{key}' -C '{comment}'; then echo failed > '{marker}';"
-            " echo '鍵を作れませんでした。この窓を閉じて Claude に伝えてください。'; exit 1; fi", "echo",
+            f" echo '鍵を作れませんでした。この窓を閉じて {AGENT_LABEL} に伝えてください。'; exit 1; fi", "echo",
         ]
     body += [
         "echo 'パソコン(キーチェーン)にパスフレーズを覚えさせます。いま決めたパスフレーズをもう一度打って return を押してください。'",
         f"if ssh-add --apple-use-keychain '{key}' 2>/dev/null || ssh-add -K '{key}'; then echo done > '{marker}';"
-        f" else echo failed > '{marker}'; echo 'うまくいきませんでした。この窓を閉じて Claude に伝えてください。'; exit 1; fi",
-        "echo", "echo '終わりました。この窓を閉じて、Claude の画面に戻ってください。'",
+        f" else echo failed > '{marker}'; echo 'うまくいきませんでした。この窓を閉じて {AGENT_LABEL} に伝えてください。'; exit 1; fi",
+        "echo", f"echo '終わりました。この窓を閉じて、{AGENT_LABEL} の画面に戻ってください。'",
     ]
     script.write_text("\n".join(body) + "\n", encoding="utf-8")
     os.chmod(script, 0o755)
@@ -695,14 +705,14 @@ def cmd_install(st: State, ns) -> None:
         "HPCJOB": posix(Path(hp)), "DATE": f"{dt.date.today()}",
         "OS": "Windows" if IS_WIN else "macOS" if IS_MAC else platform.system(),
     }
-    dest = claude_dir(st) / "skills" / "tsubame"
+    dest = skills_root(st) / "tsubame"
     if dest.exists():
         skill = dest / "SKILL.md"
         ours = skill.exists() and "tsubame-claude-setup" in skill.read_text(encoding="utf-8", errors="replace")
         if ours:                    # an earlier run of this setup: rewrite it
             shutil.rmtree(dest)
         else:                       # someone else's skill of the same name: keep it, outside skills/ so it stops loading
-            backup = claude_dir(st) / f"tsubame-skill-backup-{dt.datetime.now():%Y%m%d%H%M%S}"
+            backup = skills_root(st).parent / f"tsubame-skill-backup-{dt.datetime.now():%Y%m%d%H%M%S}"
             shutil.move(str(dest), str(backup))
             print(f"an existing 'tsubame' skill was moved to {backup}")
     dest.mkdir(parents=True)
@@ -714,7 +724,12 @@ def cmd_install(st: State, ns) -> None:
             shutil.copy2(REPO / "setup" / helper, dest / helper)
     print(f"skill written: {dest}")
 
-    perms = add_permissions(claude_dir(st) / "settings.json") if ns.allow else {"changed": False, "reason": "not requested"}
+    if st.get("agent") == "codex":      # Codex asks by its own approval mode; there is no allow list to add to
+        perms = {"changed": False, "reason": "codex: approvals follow the Codex approval mode"}
+    elif ns.allow:
+        perms = add_permissions(claude_dir(st) / "settings.json")
+    else:
+        perms = {"changed": False, "reason": "not requested"}
     st.set(settings_backup=perms.get("backup"))
     print(f"permissions: {perms}")
     result("ok", hpcjob=hp, skill=str(dest), permissions=perms, group=group, workdir=workdir)
@@ -729,7 +744,7 @@ def cmd_smoke(st: State, ns) -> None:
     if not ns.watch:
         (proj / "jobs").mkdir(parents=True, exist_ok=True)
         (proj / "src").mkdir(exist_ok=True)
-        example = (claude_dir(st) / "skills" / "tsubame" / "hpcjob.toml.example").read_text(encoding="utf-8")
+        example = (skills_root(st) / "tsubame" / "hpcjob.toml.example").read_text(encoding="utf-8")
         toml = example.replace(f'{st["workdir"]}/PROJECT', f'{st["workdir"]}/{CHECK_DIR}')
         (proj / "hpcjob.toml").write_text(toml, encoding="utf-8", newline="\n")
         (proj / "jobs" / CHECK_JOB).write_text(
@@ -799,7 +814,10 @@ def main() -> int:
     p.add_argument("--state", default=str(REPO / "setup" / "state.json"), help="where chosen values are kept")
     p.add_argument("--alias", help="ssh alias to create (default: tsubame)")
     p.add_argument("--key-name", help="key file name in ~/.ssh (default: id_ed25519_tsubame)")
+    p.add_argument("--agent", choices=("claude", "codex"),
+                   help="the AI agent following SETUP.md: Claude Code (default) or Codex (ChatGPT)")
     p.add_argument("--claude-dir", help="Claude Code config dir (default: $CLAUDE_CONFIG_DIR or ~/.claude)")
+    p.add_argument("--skills-dir", help="testing: write the skill here instead of the agent's skills folder")
     p.add_argument("--toolkit", help=f"hpc-job-toolkit source for `uv tool install` (default: {TOOLKIT})")
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("check", help="report what is already set up")
@@ -813,7 +831,7 @@ def main() -> int:
     c = sub.add_parser("connect", help="add the ssh alias, test the login, list groups and folders")
     c.add_argument("--user", help="TSUBAME login name, e.g. ux12345")
     c.add_argument("--existing", metavar="ALIAS", help="use an ssh alias that is already configured")
-    i = sub.add_parser("install", help="install hpcjob, write the Claude skill, optionally allow hpcjob")
+    i = sub.add_parser("install", help="install hpcjob, write the agent skill, optionally allow hpcjob (Claude Code)")
     i.add_argument("--group", required=True)
     i.add_argument("--workdir", required=True)
     i.add_argument("--create-workdir", action="store_true")
@@ -824,7 +842,10 @@ def main() -> int:
     ns = p.parse_args()
 
     st = State(Path(ns.state))
-    st.set(alias=ns.alias, key_name=ns.key_name, claude_dir=ns.claude_dir, toolkit=ns.toolkit)
+    st.set(alias=ns.alias, key_name=ns.key_name, claude_dir=ns.claude_dir, toolkit=ns.toolkit,
+           agent=ns.agent, skills_dir=ns.skills_dir)
+    global AGENT_LABEL
+    AGENT_LABEL = "Codex" if st.get("agent") == "codex" else "Claude"
     try:
         {"check": cmd_check, "key": cmd_key, "portal": cmd_portal, "connect": cmd_connect,
          "install": cmd_install, "smoke": cmd_smoke, "cleanup": cmd_cleanup}[ns.command](st, ns)

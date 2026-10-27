@@ -29,7 +29,7 @@ ssh・scp を直接打つときは上の実行ファイルを使う。Windows �
 4. **待つ**: `hpcjob watch <JOBID> --max-minutes 9` を、タイムアウト 600000 ミリ秒(10 分)で動かす(既定の 2 分では途中で切られる)。9 分で切り上げて終了コード 3(`STILL_RUNNING`)を返したら、ジョブは続いているので同じコマンドをもう一度。何時間もかかる計算はバックグラウンド実行で待つ。
 5. **結果を見る・回収する**: `hpcjob log <JOBID>`、`hpcjob pull <置き場所からの相対パス>`(`results/` に入る)。
 
-ほかに `hpcjob status`(自分のジョブの一覧)、`hpcjob cancel <JOBID>`、`hpcjob push <手元のフォルダ> <相対パス>`、`hpcjob usage`(使った時間とポイントの集計)。`hpcjob` は**プロジェクトのフォルダで `hpcjob <サブコマンド> …` の形**で呼ぶ。確認なしで動かす許可はこの形にだけ合う。`hpcjob` が見つからないと言われたら、Claude Code を開き直してもらうか、上の表のフルパスで呼ぶ。
+ほかに `hpcjob status`(自分のジョブの一覧)、`hpcjob cancel <JOBID>`、`hpcjob push <手元のフォルダ> <相対パス>`、`hpcjob usage`(使った時間とポイントの集計)。`hpcjob` は**プロジェクトのフォルダで `hpcjob <サブコマンド> …` の形**で呼ぶ。確認なしで動かす許可はこの形にだけ合う。`hpcjob` が見つからないと言われたら、Claude Code(か Codex)を開き直してもらうか、上の表のフルパスで呼ぶ。
 
 ポイント残高: `hpcjob run -- t4-user-info group point -g {{GROUP}}`。ポイントはグループのメンバー全員で共有している。
 

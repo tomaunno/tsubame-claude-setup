@@ -30,6 +30,19 @@
 
 どのサブコマンドも、最後の 1 行に `RESULT {json}` を出す。`status` を見て、下の各手順の分かれ道に進む。この文書に書いていない `status` や `reason` が出たら、`detail` と `hint` を読んで原因を考える。選んだ値は `setup/state.json` に残り、次の手順に引き継がれる。
 
+## Codex(ChatGPT)で進めるとき
+
+この手順書は Claude Code を前提に書いてあるが、OpenAI の Codex(ChatGPT のアカウントで使う、パソコンで作業する版)でも同じように進められる。あなたが Codex なら、次のように読み替える:
+
+- 手順 3 の最初の `check` に `--agent codex` を付ける(`<T4> --agent codex check`)。値は `setup/state.json` に残るので、2 回目からは付けなくてよい。スキルは Codex が読む置き場所 `~/.agents/skills/tsubame/` に書かれる。鍵の窓の案内も「Codex に伝えてください」になる。
+- 文中の「Claude」「Claude Code」は「Codex」と読む。本人への言葉でもそう言う。
+- 質問は、選択肢とおすすめを付けた普通の文で 1 つずつ聞く。
+- 「タイムアウト 600000 ミリ秒で動かす」は、そのコマンドの制限時間を 10 分にして動かす、という意味。
+- 手順 6 は「道具が使えない場合」の方で進める(本人のいつものブラウザでポータルを開く)。
+- 手順 9 の「確認なしで動かしてよいか」は聞かない。`--allow` を付けずに `install` する。Codex の確認の仕方は、Codex の承認の設定で決まる。
+- Codex は、ネットワークを使うコマンド(ssh・ダウンロード)や、このフォルダの外(`~/.ssh`・`~/.agents`・`~/.local`)に書くコマンドの前に、本人に許可を求めることがある。最初に本人へ「Codex が『実行してよいか』『ネットワークを使ってよいか』と聞いてきたら、許可してください」と伝えておく。
+- Codex の既定の設定では、コマンドはネットワークを使えない。TSUBAME に触れるコマンド(`<T4>` の `connect`・`install`・`smoke`・`cleanup`、uv や git のダウンロード)は、最初からネットワークを使える許可を求めて動かす。`connect` が `network` を返したら、まずネットワークが止められていないかを疑う。
+
 ## 1. この台本を手元に置く
 
 `~/tsubame-claude-setup` が無ければ置く。git があれば `git clone https://github.com/tomaunno/tsubame-claude-setup ~/tsubame-claude-setup`。無ければ zip で置く:

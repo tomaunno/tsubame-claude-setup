@@ -8,8 +8,16 @@
 
 - **TSUBAME のアカウント**(`ux12345` のようなログイン名)。まだ無ければ、大学のポータルから申し込みます(https://www.t4.cii.isct.ac.jp/getting-account )。
 - **研究室の TSUBAME グループへの参加**。計算の料金(ポイント)はグループから払います。グループの管理者に招待してもらい、届いたメールのリンクで承諾してください。
-- **Claude Code**。デスクトップアプリでもターミナル版でもかまいません(入れ方: https://code.claude.com/docs/en/quickstart )。
+- **Claude Code**。デスクトップアプリでもターミナル版でもかまいません(入れ方: https://code.claude.com/docs/en/quickstart )。ChatGPT を使っている人は、代わりに **Codex** でも進められます(下の「ChatGPT(Codex)を使っている人へ」)。
 - Windows 10/11 か Mac。
+
+## ChatGPT(Codex)を使っている人へ
+
+ブラウザやスマホの ChatGPT(会話だけの画面)では、あなたのパソコンでコマンドを動かせないので、この準備はできません。ChatGPT のアカウントでそのまま使える **Codex**(パソコンで作業する版。アプリとターミナル版があります。入れ方: https://developers.openai.com/codex/quickstart )を入れて、下の「やり方」の Claude Code を Codex に置き換えて進めてください。送る文は同じです。
+
+- Codex は手順書の中の「Codex で進めるとき」を読んで、Codex 用に読み替えて進めます。Claude のスキルの代わりに、Codex が読むスキル(`~/.agents/skills/tsubame/`)を書きます。
+- Codex が「実行してよいか」「ネットワークを使ってよいか」「このフォルダの外を書き換えてよいか」と聞いてきたら、許可してください(TSUBAME への接続や、鍵・設定を書くために要ります)。
+- Codex での通しの確認はまだしていません。うまくいかなかったら、どの手順で何が出たかを作った人に知らせてください。
 
 ## やり方
 
@@ -42,8 +50,8 @@ Claude に頼むだけです。
 |---|---|---|
 | TSUBAME に入るための鍵と、接続の設定 | `~/.ssh/id_ed25519_tsubame`、`~/.ssh/config` の `Host tsubame` | あなたのアカウントで TSUBAME に入る |
 | uv と hpcjob | `~/.local/bin/` | hpcjob が TSUBAME への送受信とジョブの操作をする([hpc-job-toolkit](https://github.com/tomaunno/hpc-job-toolkit))。uv はそれを Python ごと入れる |
-| Claude のスキル | `~/.claude/skills/tsubame/` | TSUBAME の使い方と、あなたの接続の値を Claude に教える |
-| 確認なしで動かす許可(選んだ場合だけ) | `~/.claude/settings.json` | hpcjob の送る・見る・取ってくる操作を、毎回聞かずに動かす |
+| Claude のスキル | `~/.claude/skills/tsubame/`(Codex なら `~/.agents/skills/tsubame/`) | TSUBAME の使い方と、あなたの接続の値を Claude(か Codex)に教える |
+| 確認なしで動かす許可(Claude Code で、選んだ場合だけ) | `~/.claude/settings.json` | hpcjob の送る・見る・取ってくる操作を、毎回聞かずに動かす |
 
 準備のためだけに使った物は、最後に Claude が自動で片付けます。消すのは、持ってきたこのセットアップのフォルダ、TSUBAME に作った確認用のフォルダ、ダウンロードの残り、設定ファイルの控えです。
 
